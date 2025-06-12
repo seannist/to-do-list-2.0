@@ -1,86 +1,108 @@
-import { Mistral } from "@mistralai/mistralai";
-import fs from 'fs';
+import { Mistral } from '@mistralai/mistralai'
 
-// Base64 Image Analysis
-async function encodeImage(imagePath: string): Promise<string | null> {
-    try {
-        const imageBuffer = fs.readFileSync(imagePath);
-        const base64Image = imageBuffer.toString('base64');
-        return base64Image;
-    } catch (error) {
-        console.error(`Error encoding image: ${error}`);
-        return null;
-    }
+// Debug API key loading
+const apiKey = "DPFHktbT8jYG2hNu0t3sn0s1xzuMJezz"
+console.log('API Key loaded:', apiKey ? 'Yes (length: ' + apiKey.length + ')' : 'No')
+
+if (!apiKey) {
+  console.error('Mistral API key is not set')
 }
 
-export async function analyzeBase64Image(imagePath: string): Promise<string | null> {
-    try {
-        const base64Image = await encodeImage(imagePath);
-        if (!base64Image) {
-            throw new Error('Failed to encode image');
-        }
+const client = new Mistral({ apiKey })
 
-        const apiKey = process.env.MISTRAL_API_KEY;
-        if (!apiKey) {
-            throw new Error('MISTRAL_API_KEY is not set in environment variables');
-        }
-
-        const client = new Mistral({ apiKey });
-
-        const chatResponse = await client.chat.complete({
-            model: "pixtral-12b",
-            messages: [
-                {
-                    role: "user",
-                    content: [
-                        { type: "text", text: "What's in this image?" },
-                        {
-                            type: "image_url",
-                            imageUrl: `data:image/jpeg;base64,${base64Image}`,
-                        },
-                    ],
-                },
-            ],
-        });
-
-        const content = chatResponse.choices[0]?.message?.content;
-        return typeof content === 'string' ? content : null;
-    } catch (error) {
-        console.error(`Error analyzing base64 image: ${error}`);
-        return null;
+export async function analyzeBase64Image(imagePath: string): Promise<string> {
+  try {
+    if (!apiKey) {
+      throw new Error('Mistral API key is not configured')
     }
+
+    // Convert image to base64
+    const response = await fetch(imagePath)
+    const blob = await response.blob()
+    const base64 = await new Promise<string>((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result as string)
+      reader.readAsDataURL(blob)
+    })
+
+    console.log('Sending request to Mistral API...')
+    // Send to Mistral API
+    const result = await client.chat.complete({
+      model: 'pixtral-12b',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'What\'s in this image?'
+            },
+            {
+              type: 'image_url',
+              imageUrl: base64
+            }
+          ]
+        }
+      ]
+    })
+
+    const content = result.choices[0]?.message?.content
+    if (!content || typeof content !== 'string') {
+      throw new Error('Invalid response content')
+    }
+    return content
+  } catch (error) {
+    console.error('Error analyzing image:', error)
+    if (error instanceof Error) {
+      if (error.message.includes('Unauthorized')) {
+        throw new Error('Invalid or missing Mistral API key. Please check your environment variables.')
+      }
+      throw error
+    }
+    throw new Error('Failed to analyze image')
+  }
 }
 
-// URL Image Analysis
-export async function analyzeImageUrl(imageUrl: string): Promise<string | null> {
-    try {
-        const apiKey = process.env.MISTRAL_API_KEY;
-        if (!apiKey) {
-            throw new Error('MISTRAL_API_KEY is not set in environment variables');
-        }
-
-        const client = new Mistral({ apiKey });
-
-        const chatResponse = await client.chat.complete({
-            model: "pixtral-12b",
-            messages: [
-                {
-                    role: "user",
-                    content: [
-                        { type: "text", text: "What's in this image?" },
-                        {
-                            type: "image_url",
-                            imageUrl: imageUrl,
-                        },
-                    ],
-                },
-            ],
-        });
-
-        const content = chatResponse.choices[0]?.message?.content;
-        return typeof content === 'string' ? content : null;
-    } catch (error) {
-        console.error(`Error analyzing image URL: ${error}`);
-        return null;
+export async function analyzeImageUrl(imageUrl: string): Promise<string> {
+  try {
+    if (!apiKey) {
+      throw new Error('Mistral API key is not configured')
     }
+
+    console.log('Sending request to Mistral API...')
+    // Send to Mistral API
+    const result = await client.chat.complete({
+      model: 'pixtral-12b',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'What\'s in this image?'
+            },
+            {
+              type: 'image_url',
+              imageUrl: imageUrl
+            }
+          ]
+        }
+      ]
+    })
+
+    const content = result.choices[0]?.message?.content
+    if (!content || typeof content !== 'string') {
+      throw new Error('Invalid response content')
+    }
+    return content
+  } catch (error) {
+    console.error('Error analyzing image:', error)
+    if (error instanceof Error) {
+      if (error.message.includes('Unauthorized')) {
+        throw new Error('Invalid or missing Mistral API key. Please check your environment variables.')
+      }
+      throw error
+    }
+    throw new Error('Failed to analyze image')
+  }
 } 

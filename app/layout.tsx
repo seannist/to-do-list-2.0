@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import './cyberpunk.css'
 
 export const metadata: Metadata = {
   title: 'Todo App',
@@ -8,9 +9,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body 
