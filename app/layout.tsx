@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import './cyberpunk.css'
+import { redirect } from 'next/navigation'
 
 export const metadata: Metadata = {
   title: 'Todo App',
@@ -12,6 +13,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Redirect to login page if at root
+  if (typeof window !== 'undefined' && window.location.pathname === '/') {
+    redirect('/login')
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body 
